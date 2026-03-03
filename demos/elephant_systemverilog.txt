@@ -1,0 +1,110 @@
+// uart_elephant: Sends "elephant\n" over UART every 5 seconds.
+//
+// Wiring (FPGA -> Arduino):
+//   uart_tx -> Arduino pin 0 (RX)
+//   GND     -> Arduino GND
+//
+// On the Arduino: upload an empty sketch, then open Serial Monitor at 9600 baud.
+
+module uart_elephant(
+    input  wire clk,        // 100 MHz clock
+    input  wire reset_n,    // Active-low reset (BTN0)
+    output wire uart_tx     // UART TX (USB-UART bridge)
+);
+    localparam TIMER_MAX  = 500_000_000; // 5 seconds at 100 MHz
+    localparam MSG_LENGTH = 9;
+
+    reg [28:0] timer_counter;
+    reg        send_trigger;
+
+    // "elephant\n"
+    reg [7:0] message [0:MSG_LENGTH-1];
+    initial begin
+        message[0] = 8'h65; // e
+        message[1] = 8'h6C; // l
+        message[2] = 8'h65; // e
+        message[3] = 8'h70; // p
+        message[4] = 8'h68; // h
+        message[5] = 8'h61; // a
+        message[6] = 8'h6E; // n
+        message[7] = 8'h74; // t
+        message[8] = 8'h0A; // newline
+    end
+
+    reg [3:0] byte_index;
+    reg [7:0] tx_data;
+    reg       tx_start;
+    wire      tx_busy;
+
+    typedef enum { IDLE, SENDING } state_t;
+    state_t state;
+
+    // 5-second periodic trigger
+    always_ff @(posedge clk or negedge reset_n) begin
+        if (!reset_n) begin
+            timer_counter <= 0;
+            send_trigger  <= 0;
+        end else begin
+            if (timer_counter >= TIMER_MAX - 1) begin
+                timer_counter <= 0;
+                send_trigger  <= 1;
+            end else begin
+                timer_counter <= timer_counter + 1;
+                send_trigger  <= 0;
+            end
+        end
+    end
+
+    // Message transmission state machine
+    always_ff @(posedge clk or negedge reset_n) begin
+        if (!reset_n) begin
+            state      <= IDLE;
+            byte_index <= 0;
+            tx_start   <= 0;
+        end else begin
+            case (state)
+                IDLE: begin
+                    if (send_trigger) begin
+                        state      <= SENDING;
+                        tx_data    <= message[0];
+                        byte_index <= 1;
+                        tx_start   <= 1;
+                    end else begin
+                        tx_start <= 0;
+                    end
+                end
+
+                SENDING: begin
+                    if (tx_start) begin
+                        tx_start <= 0; // tx_start is a one-cycle pulse
+                    end else if (!tx_busy && byte_index < MSG_LENGTH) begin
+                        tx_data    <= message[byte_index];
+                        tx_start   <= 1;
+                        byte_index <= byte_index + 1;
+                    end else if (!tx_busy && byte_index >= MSG_LENGTH) begin
+                        state <= IDLE;
+                    end
+                end
+            endcase
+        end
+    end
+
+    // Required for Vivado to drive CCLK via JTAG on 7-series devices
+    STARTUPE2 #(
+        .PROG_USR("FALSE"),
+        .SIM_CCLK_FREQ(0.0)
+    ) STARTUPE2_inst (
+        .CFGCLK(), .CFGMCLK(), .EOS(), .PREQ(),
+        .CLK(1'b0), .GSR(1'b0), .GTS(1'b0),
+        .KEYCLEARB(1'b1), .PACK(1'b0),
+        .USRCCLKO(clk), .USRCCLKTS(1'b0),
+        .USRDONEO(1'b1), .USRDONETS(1'b0)
+    );
+
+    uart_tx uart_transmitter (
+        .clk(clk), .reset_n(reset_n),
+        .tx_data(tx_data), .tx_start(tx_start),
+        .tx(uart_tx), .tx_busy(tx_busy)
+    );
+
+endmodule

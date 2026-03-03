@@ -1,0 +1,30 @@
+[RPLidar C1] 
+    ↓ UART (460800 baud, raw sensor stream)
+[FPGA - Arty A7-100T]
+    • UART receiver module
+    • Packet parser (checksums, validity)
+    • Aggregate 5000 points/sec → 18 sectors
+    • Each sector: angle + min/avg distance
+    • Safety override (emergency stop if obstacle <150mm)
+    • LED ring controller (WS2812 driver, update at 10Hz)
+    ↓ UART (115200 baud, processed sectors)
+[Arduino Mega 2560 + Adafruit Motor Shield v3]
+    • Receive sector data (18 distance values)
+    • Pathfinding algorithm (wall-following → Trémaux's)
+    • Decision: compute desired motion (direction + speed)
+    • Kinematics calculation (convert to 4 wheel speeds)
+    • I2C communication to motor shield
+    ↓ I2C (internal to shield)
+[Adafruit Motor Shield v3]
+    • Generate 4 independent PWM signals
+    • Control direction for each motor
+    • Drive 4 DC motors independently
+    ↓ Power + Control
+[4× DC Motors with Omni Wheels]
+    • Robot moves through maze
+
+[WS2812B LED Ring - 24-48 LEDs]
+    ← Driven directly by FPGA GPIO
+    • Real-time obstacle visualization
+    • Color-coded distance (RED/YELLOW/GREEN)
+    • Updates at 10Hz synchronized with sensor
