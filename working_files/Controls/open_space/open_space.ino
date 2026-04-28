@@ -24,11 +24,24 @@ Sector sectorsTest[36] = {
 };
 
 
-// write makeDecision 
+// write makeDecision - temp by Akshay
 int makeDecision(Sector sectors[36]) {
   int bestDirection = 0;
   //logic to find best direction
   //hint: sectors[i].average
+
+  float bestScore = -1;
+
+  for (int i = 0; i < 36; i++) {
+    // Combine average and minimum into a single score (weighted equally)
+    float score = (sectors[i].average + sectors[i].minimum) / 2.0;
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestDirection = sectors[i].angle;
+    }
+  }
+
   return bestDirection;
 }
  
