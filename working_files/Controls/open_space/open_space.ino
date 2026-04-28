@@ -53,7 +53,8 @@ int makeDecision(Sector sectors[36], int oldDirection) {
 void setup() {
   Serial.begin(115200);
 
-  int decision = makeDecision(sectorsTest, 18); 
+  int decision = 18;
+  decision = makeDecision(sectorsTest, decision); 
 
   Serial.print("best direction:");
   Serial.println(decision);
