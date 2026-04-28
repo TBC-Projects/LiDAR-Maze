@@ -32,6 +32,7 @@ int makeDecision(Sector sectors[36]) {
       bestDirection = i;
     }
   }
+  
   //logic to find best direction
   //hint: sectors[i].average
   return bestDirection;
