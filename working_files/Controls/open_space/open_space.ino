@@ -27,6 +27,12 @@ Sector sectorsTest[36] = {
 // write makeDecision 
 int makeDecision(Sector sectors[36]) {
   int bestDirection = 0;
+  for (int i = 0; i < 36; i++) {
+    if (sectors[i].average > sectors[bestDirection].average) {
+      bestDirection = i;
+    }
+  }
+  
   //logic to find best direction
   //hint: sectors[i].average
   return bestDirection;
