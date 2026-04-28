@@ -33,6 +33,7 @@ int makeDecision(Sector sectors[36], int oldDirection) {
 
   for (int i = 0; i < 4; i++) {
     float score = 0;
+    
     for (int j = 0; j < 9; i++) {
     // Combine average and minimum into a single score (weighted equally)
       score += (sectors[9*i + j].average + sectors[9*i + j].minimum) / 2.0;
@@ -41,11 +42,13 @@ int makeDecision(Sector sectors[36], int oldDirection) {
         bestScore = score;
         bestDirection = i;
       }
-
-      if (bestDirection == -1){
-        bestDirection == (oldDirection + 2) % 4;
-      }
+  
     }
+
+    if (bestDirection == -1){
+      bestDirection == (oldDirection + 2) % 4;
+    }
+
   }
   
 
