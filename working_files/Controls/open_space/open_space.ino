@@ -25,7 +25,7 @@ Sector sectorsTest[36] = {
 
 
 // write makeDecision - temp by Akshay
-int makeDecision(Sector sectors[36]) {
+int makeDecision(Sector sectors[36], int oldDirection) {
   int bestDirection = 0;
   //logic to find best direction
   //hint: sectors[i].average
@@ -36,9 +36,13 @@ int makeDecision(Sector sectors[36]) {
     // Combine average and minimum into a single score (weighted equally)
     float score = (sectors[i].average + sectors[i].minimum) / 2.0;
 
-    if (score > bestScore) {
+    if (score > bestScore && i != oldDirection) {
       bestScore = score;
       bestDirection = sectors[i].angle;
+    }
+
+    if (bestDirection == -1){
+      bestDirection == (oldDirection + 18) % 36
     }
   }
 
@@ -49,7 +53,7 @@ int makeDecision(Sector sectors[36]) {
 void setup() {
   Serial.begin(115200);
 
-  int decision = makeDecision(sectorsTest); 
+  int decision = makeDecision(sectorsTest, 18); 
 
   Serial.print("best direction:");
   Serial.println(decision);
