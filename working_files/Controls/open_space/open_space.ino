@@ -6,7 +6,6 @@ struct Sector {
   int minimum;
 };
 
-Sector sectors[36];
 
 Sector sectorsTest[36] = {
   {0, 2500, 2450},    {10, 2500, 2480},   {20, 2500, 2470},   // Front - OPEN
@@ -42,7 +41,7 @@ int makeDecision(Sector sectors[36], int oldDirection) {
     }
 
     if (bestDirection == -1){
-      bestDirection == (oldDirection + 18) % 36
+      bestDirection == (oldDirection + 18) % 36;
     }
   }
 
