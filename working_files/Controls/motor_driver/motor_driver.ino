@@ -88,11 +88,8 @@ void Right_Left(int Time, int Direction){
 // loop - loops forever
 void loop(){ 
 
-  Forw_Back(5000, 1);
-  Forw_Back(5000, 2);
-  Forw_Back(1000, 4);
-  Right_Left(5000, 1);
-  Right_Left(5000, 2);
-  Right_Left(1000, 4);
   
+
 }`
+
+

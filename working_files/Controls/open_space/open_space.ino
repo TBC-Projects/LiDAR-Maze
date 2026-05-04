@@ -6,6 +6,13 @@ struct Sector {
   int minimum;
 };
 
+//added a new struct to split the angles into 4 quadrants
+struct Quadrant {
+  int startAngle;
+  int endAngle;
+  float averageScore;
+};
+
 Sector sectors[36];
 
 Sector sectorsTest[36] = {
@@ -44,15 +51,61 @@ int makeDecision(Sector sectors[36]) {
 
   return bestDirection;
 }
+
+//Converts 36 quadrents into 4 sectors
+void computeQuadrants(Sector sectors[36], Quadrant quads[4]){
+  for (int q = 0; q < 4; q++){ //loop through 4 quadrants first(1-4)
+    int startIndex = q * 9;
+    int endIndex = startIndex + 9;
+
+    float totalScore = 0;
+  
+
+    for (int i = startIndex; i < endIndex ; i++){ //loop through each indiidual (0-8, 9-17, 18-26, 27-35)
+    
+      float score = (sectors[i].average + sectors[i].minimum) / 2.0; //converts average and minimum
+                                                                       //into a single score
+      totalScore += score;
+    
+    }
+
+    quads[q].startAngle = sectors[startIndex].angle;
+    quads[q].endAngle = sectors[endIndex - 1].angle;
+    quads[q].averageScore = totalScore / 9.0;
+
+
+  }
+}
+
+//takes in the already processed 4 sectors and finds the best one
+int bestQuadrant(Quadrant quads[4]){
+  int best = 0;
+  float bestScore = -1;
+
+  for (int i = 0; i < 4; i ++){
+    if (quads[i].averageScore > bestScore){
+      bestScore = quads[i].averageScore;
+      best = i;
+    }
+  }
+  return best;
+}
  
 // motor direction - test
 void setup() {
   Serial.begin(115200);
 
-  int decision = makeDecision(sectorsTest); 
+  Quadrant quads[4];
+  computeQuadrants(sectorsTest, quads);
+  int bestQ = bestQuadrant(quads);
 
-  Serial.print("best direction:");
-  Serial.println(decision);
+
+  Serial.print("Best Quadrant: ");
+  Serial.println(bestQ);
+  Serial.print("Angle Range: ");
+  Serial.print(quads[bestQ].startAngle);
+  Serial.print(" to ");
+  Serial.println(quads[bestQ].endAngle);
 }
 
 void loop() {
