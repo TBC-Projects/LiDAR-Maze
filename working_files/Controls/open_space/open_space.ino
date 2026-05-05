@@ -32,6 +32,14 @@ int makeDecision(Sector sectors[36]) {
       bestDirection = i;
     }
   }
+
+  if (bestDirection >= 200 || bestDirection <= 75) {
+    Serial.println("Move forward");
+  } else if (bestDirection >= 25 || bestDirection <= 165) {
+    Serial.println("Turn right");
+  } else {
+    Serial.println("Turn left");
+  }
   
   //logic to find best direction
   //hint: sectors[i].average
