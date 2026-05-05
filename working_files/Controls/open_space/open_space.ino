@@ -28,29 +28,21 @@ Sector sectorsTest[36] = {
   {270, 800, 785},    {280, 800, 775},    {290, 800, 780},    
   {300, 800, 770},    {310, 1200, 1170},  {320, 1500, 1450},  
   {330, 2000, 1970},  {340, 2500, 2460},  {350, 2500, 2480}
+
+
 };
 
-
-// write makeDecision - temp by Akshay
-int makeDecision(Sector sectors[36]) {
-  int bestDirection = 0;
-  //logic to find best direction
-  //hint: sectors[i].average
-
-  float bestScore = -1;
-
+void finalizeQuadrants(Sector sectors[36]){
   for (int i = 0; i < 36; i++) {
-    // Combine average and minimum into a single score (weighted equally)
-    float score = (sectors[i].average + sectors[i].minimum) / 2.0;
+      sectors[i].angle += 315;
 
-    if (score > bestScore) {
-      bestScore = score;
-      bestDirection = sectors[i].angle;
-    }
+      // Optional: keep angle within 0–359 range
+      if (sectors[i].angle >= 360) {
+          sectors[i].angle -= 360;
+      }
   }
-
-  return bestDirection;
 }
+
 
 //Converts 36 quadrents into 4 sectors
 void computeQuadrants(Sector sectors[36], Quadrant quads[4]){
@@ -109,5 +101,6 @@ void setup() {
 }
 
 void loop() {
-  // FPGA reading TBA 
+  
+  
 }
