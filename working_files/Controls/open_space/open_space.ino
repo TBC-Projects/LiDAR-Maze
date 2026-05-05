@@ -1,11 +1,46 @@
-// first algorithm -- find the most open direction and move towards it
+#include <Wire.h>
+#include <Adafruit_MotorShield.h> 
+
+
+// Initialize Motors
+
+/*Motor order: starting from the "left" side, going anti-clockwise: 1,2,3,4
+  4
+  ^
+1 | 3
+  |
+  2
+*/
+
+Adafruit_MotorShield AFMS = Adafruit_MotorShield();
+Adafruit_DCMotor *Motor1 = AFMS.getMotor(1); // Motors can be switched here (1) <--> (2)
+Adafruit_DCMotor *Motor2 = AFMS.getMotor(2);
+Adafruit_DCMotor *Motor3 = AFMS.getMotor(3);
+Adafruit_DCMotor *Motor4 = AFMS.getMotor(4);
+
+// Set Initial Speed of Motors (CAN BE EDITED BY USER)
+//  initial speed may vary and later can be changed with Sp potentiometer. theoretical max
+//  is 255, but the motors will likely overdraw power and cause the Arduino to shut off. 
+//  motors likely need a minimum speed of 20-30 to move the cart.
+//
+//  motor speeds are separated incase one motor turns faster than the other.  
+int M1Sp = 60; 
+int M2Sp = 60;
+int M3Sp = 60; 
+int M4Sp = 60;
+int MSp = 60; // MSp is a "generic" speed
+
+//Set LED Pin
+// TODO: Replace "___", and assign the pin number connected to the Arduino.
+//  it is recommended to use pin 13, but can change to another digital pin 
+//  and connect extra LED to me more easily seen
+int led_Pin = 13;
 
 struct Sector {
   int angle;
   int average;
   int minimum;
 };
-
 
 Sector sectorsTest[36] = {
   {0, 2500, 2450},    {10, 2500, 2480},   {20, 2500, 2470},   // Front - OPEN
@@ -23,20 +58,58 @@ Sector sectorsTest[36] = {
 };
 
 
-// write makeDecision - temp by Akshay
+
+//the input for Direction is an integer (1-4) as defined from the database
+
+//1 -> FORWARD
+//2 -> RIGHT
+//3 -> BACK
+//4 -> LEFT
+//0 -> BRAKE
+
+
+void Move(int Time, int Direction){
+  if(Direction == 0){
+    Motor1->run(4);
+    Motor2->run(4);
+    Motor3->run(4);
+    Motor4->run(4);
+  }
+  else{
+    bool Front_Right = Direction % 2 == 1;
+    Direction = 1 + int(Direction>=3);
+    if(Front_Right){
+      Motor1->setSpeed(M1Sp);
+      Motor1->run(Direction);
+      Motor3->setSpeed(M3Sp);
+      Motor3->run(Direction);
+      delay(Time);
+    }
+
+    else{
+      Motor2->setSpeed(M2Sp);
+      Motor2->run(Direction);
+      Motor4->setSpeed(M4Sp);
+      Motor4->run(Direction);
+      delay(Time);
+    }
+  }
+
+
+}
+
+// make decision returns 0-3 for cordinal directions, 0 is front and clockwise around.
 int makeDecision(Sector sectors[36], int oldDirection) {
   int bestDirection = 0;
-  //logic to find best direction
-  //hint: sectors[i].average
 
   float bestScore = -1;
 
   for (int i = 0; i < 4; i++) {
     float score = 0;
     
-    for (int j = 0; j < 9; i++) {
-    // Combine average and minimum into a single score (weighted equally)
-      score += (sectors[9*i + j].average + sectors[9*i + j].minimum) / 2.0;
+    for (int j = -4; j < 5; i++) {
+      k = (9*i + j + 36) % 36
+      score += (sectors[k].average + sectors[k].minimum) / 2.0;
 
       if (score > bestScore && i != oldDirection) {
         bestScore = score;
@@ -51,19 +124,39 @@ int makeDecision(Sector sectors[36], int oldDirection) {
 
   }
   
-
+  Move(int(score / MSp * 1), bestDirection + 1);
   return bestDirection;
 }
+
+
+
+
+
  
 // motor direction - test
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(9600);
+  AFMS.begin();
+  
+  pinMode(led_Pin, OUTPUT);
+
+    for (int waitii = 0; waitii < 20; waitii++) {
+      digitalWrite(led_Pin, HIGH);
+      delay(100);
+
+      digitalWrite(led_Pin, LOW);
+      delay(100);
+    } 
+
 
   int decision = 2;
-  decision = makeDecision(sectorsTest, decision); 
+  decision = makeDecision(sectorsTest, decision);
 
   Serial.print("best direction:");
   Serial.println(decision);
+
+
+
 }
 
 void loop() {
