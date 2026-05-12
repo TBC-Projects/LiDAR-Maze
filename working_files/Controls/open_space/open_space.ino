@@ -4,7 +4,7 @@
 
 // Initialize Motors
 
-/*Motor order: starting from the "left" side, going anti-clockwise: 1,2,3,4
+/*Motor order: starting from the "left" side, going anti-clockwise: 1,2,3,4, "Forwards" and "Rightward" is the forward direction of the motors
   4
   ^
 1 | 3
@@ -45,9 +45,9 @@ struct Sector {
 Sector sectorsTest[36] = {
   {0, 2500, 2450},    {10, 2500, 2480},   {20, 2500, 2470},   // Front - OPEN
   {30, 2500, 2490},   {40, 2500, 2460},   {50, 2500, 2475},   
-  {60, 1500, 1450},   {70, 1200, 1150},   {80, 800, 750},     // Right side - wall getting closer
-  {90, 800, 775},     {100, 800, 780},    {110, 800, 770},    // Right - WALL
-  {120, 800, 785},    {130, 800, 775},    {140, 1200, 1150},  
+  {60, 1500, 1450},   {70, 1200, 1150},   {80, 1200000, 11000050},     // Right side - wall getting closer
+  {90, 1200000, 11000050},     {100, 1200000, 11000050},    {110, 1200000, 11000050},    // Right - WALL
+  {120, 1200000, 11000050},    {130, 1200000, 11000050},    {140, 1200000, 11000050},  
   {150, 1500, 1480},  {160, 2000, 1950},  {170, 2500, 2470},  
   {180, 2500, 2480},  {190, 2500, 2460},  {200, 2500, 2475},  // Behind - OPEN
   {210, 2500, 2490},  {220, 2000, 1960},  {230, 1500, 1470},  
@@ -103,12 +103,14 @@ int makeDecision(Sector sectors[36], int oldDirection) {
   int bestDirection = 0;
 
   float bestScore = -1;
+  float score;
 
   for (int i = 0; i < 4; i++) {
-    float score = 0;
+    score = 0;
+    int k;
     
-    for (int j = -4; j < 5; i++) {
-      k = (9*i + j + 36) % 36
+    for (int j = -4; j < 5; j++) {
+      k = (9*i + j + 36) % 36;
       score += (sectors[k].average + sectors[k].minimum) / 2.0;
 
       if (score > bestScore && i != oldDirection) {
@@ -124,7 +126,7 @@ int makeDecision(Sector sectors[36], int oldDirection) {
 
   }
   
-  Move(int(score / MSp * 1), bestDirection + 1);
+  Move(int(score / MSp * 10), bestDirection + 1);
   return bestDirection;
 }
 
@@ -154,6 +156,7 @@ void setup() {
 
   Serial.print("best direction:");
   Serial.println(decision);
+  Move(0, 0);
 
 
 
