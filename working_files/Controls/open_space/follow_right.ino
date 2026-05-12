@@ -70,23 +70,23 @@ Sector sectorsTest[36] = {
 
 void Move(int Time, int Bearing){
   //enter bearing as degrees so (00)0-360, if it's -1 it will be to stop. Time should be kept low
-  if(Direction == -1){
+  if(Bearing == -1){
     Motor1->run(4);
     Motor2->run(4);
     Motor3->run(4);
     Motor4->run(4);
   }
   else{
-    Bearing = Bearing * (std::acos(-1.0) / 180); //converts bearing from degrees to radians
+    Bearing = Bearing * (acos(-1.0) / 180); //converts bearing from degrees to radians
 
-    Motor1->setSpeed(M1Sp*std::cos(Bearing));
-    Motor1->run(Direction);
-    Motor3->setSpeed(M3Sp*std::cos(Bearing));
-    Motor3->run(Direction);
-    Motor2->setSpeed(M2Sp*std::sin(Bearing));
-    Motor2->run(Direction);
-    Motor4->setSpeed(M4Sp*std::sin(Bearing));
-    Motor4->run(Direction);
+    Motor1->setSpeed(M1Sp*cos(Bearing));
+    Motor1->run(Bearing);
+    Motor3->setSpeed(M3Sp*cos(Bearing));
+    Motor3->run(Bearing);
+    Motor2->setSpeed(M2Sp*sin(Bearing));
+    Motor2->run(Bearing);
+    Motor4->setSpeed(M4Sp*sin(Bearing));
+    Motor4->run(Bearing);
     delay(Time);
   }
 
@@ -99,55 +99,58 @@ int min_Distance = 700;
 
 int makeDecision(Sector sectors[36]) {  
   
-    int bestDirection = -1;
-    float bestScore = 9000;
-    bool Turn = true;
+  int bestDirection = -1;
+  float bestScore = 9000.0;
+  bool Turn = true;
+  float score = 0.0;
 
-    while(){
+  while(Turn){
 
-      for (int j = -4; j < 5; i++) {
-        
-        k = (9*Forwards_Direction + j + 36) % 36;
-        float score = (sectors[k].average + sectors[k].minimum) / 2.0;
+    for (int j = -4; j < 5; j++) {
+      int k;
 
-        if (score < bestScore) {
-          bestScore = score;
-          bestDirection = (k + 27) % 36;
-        }
-      }
-
-      if (bestDireciton >= Forwards_Direction-4 && bestDireciton <= Forwards_Direction+4){
-        Forwards_Direction++;
-      }else{
-        Turn = false;
-      }
-
-    }
-    
-    for (int j = -4; j < 5; i++) {
-        
-      k = (9*(Forwards_Direction+1) + j + 36) % 36;
-      float score = (sectors[k].average + sectors[k].minimum) / 2.0;
+      k = (9*Forwards_Direction + j + 36) % 36;
+      score = (sectors[k].average + sectors[k].minimum) / 2.0;
 
       if (score < bestScore) {
         bestScore = score;
         bestDirection = (k + 27) % 36;
       }
-
     }
 
-
-    if (best_score < min_Distance) {
-      bestDirection = (bestDirection + 35) % 36;
+    if (bestDirection >= Forwards_Direction-4 && bestDirection <= Forwards_Direction+4){
+      Forwards_Direction++;
+    }else{
+      Turn = false;
     }
+
+  }
     
-    if (bestDirection == -1){
-        bestDirection == (Forwards_Direction + 2) % 4;
+  for (int j = -4; j < 5; j++) {
+    int k;
+      
+    k = (9*(Forwards_Direction+1) + j + 36) % 36;
+    score = (sectors[k].average + sectors[k].minimum) / 2.0;
+
+    if (score < bestScore) {
+      bestScore = score;
+      bestDirection = (k + 27) % 36;
     }
+
+  }
+
+
+  if (bestScore < min_Distance) {
+    bestDirection = (bestDirection + 35) % 36;
+  }
+  
+  if (bestDirection == -1){
+      bestDirection == (Forwards_Direction + 2) % 4;
+  }
 
   
-    Move(int(score / MSp * 1), bestDirection + 1);
-    return bestDirection;
+  Move(int(score / MSp * 1), bestDirection + 1);
+  return bestDirection;
 }
 
 
@@ -169,8 +172,8 @@ void setup() {
     } 
 
 
-  int decision = 2;
-  decision = makeDecision(sectorsTest, decision);
+  int decision;
+  decision = makeDecision(sectorsTest);
 
   Serial.print("best direction:");
   Serial.println(decision);
