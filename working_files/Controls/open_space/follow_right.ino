@@ -68,31 +68,26 @@ Sector sectorsTest[36] = {
 //0 -> BRAKE
 
 
-void Move(int Time, int Direction){
-  if(Direction == 0){
+void Move(int Time, int Bearing){
+  //enter bearing as degrees so (00)0-360, if it's -1 it will be to stop. Time should be kept low
+  if(Direction == -1){
     Motor1->run(4);
     Motor2->run(4);
     Motor3->run(4);
     Motor4->run(4);
   }
   else{
-    bool Front_Right = Direction % 2 == 1;
-    Direction = 1 + int(Direction>=3);
-    if(Front_Right){
-      Motor1->setSpeed(M1Sp);
-      Motor1->run(Direction);
-      Motor3->setSpeed(M3Sp);
-      Motor3->run(Direction);
-      delay(Time);
-    }
+    Bearing = Bearing * (std::acos(-1.0) / 180); //converts bearing from degrees to radians
 
-    else{
-      Motor2->setSpeed(M2Sp);
-      Motor2->run(Direction);
-      Motor4->setSpeed(M4Sp);
-      Motor4->run(Direction);
-      delay(Time);
-    }
+    Motor1->setSpeed(M1Sp*std::cos(Bearing));
+    Motor1->run(Direction);
+    Motor3->setSpeed(M3Sp*std::cos(Bearing));
+    Motor3->run(Direction);
+    Motor2->setSpeed(M2Sp*std::sin(Bearing));
+    Motor2->run(Direction);
+    Motor4->setSpeed(M4Sp*std::sin(Bearing));
+    Motor4->run(Direction);
+    delay(Time);
   }
 
 
@@ -106,24 +101,46 @@ int makeDecision(Sector sectors[36]) {
   
     int bestDirection = -1;
     float bestScore = 9000;
+    bool Turn = true;
 
+    while(){
+
+      for (int j = -4; j < 5; i++) {
+        
+        k = (9*Forwards_Direction + j + 36) % 36;
+        float score = (sectors[k].average + sectors[k].minimum) / 2.0;
+
+        if (score < bestScore) {
+          bestScore = score;
+          bestDirection = (k + 27) % 36;
+        }
+      }
+
+      if (bestDireciton >= Forwards_Direction-4 && bestDireciton <= Forwards_Direction+4){
+        Forwards_Direction++;
+      }else{
+        Turn = false;
+      }
+
+    }
     
     for (int j = -4; j < 5; i++) {
         
-        k = (9*Forwards_Direction + j + 36) % 36
-        int score = (sectors[k].average + sectors[k].minimum) / 2.0;
+      k = (9*(Forwards_Direction+1) + j + 36) % 36;
+      float score = (sectors[k].average + sectors[k].minimum) / 2.0;
 
-        if (score < bestScore) {
+      if (score < bestScore) {
         bestScore = score;
         bestDirection = (k + 27) % 36;
-        }
+      }
 
     }
+
 
     if (best_score < min_Distance) {
-        bestDirection = (k + 35) % 36;
+      bestDirection = (bestDirection + 35) % 36;
     }
-
+    
     if (bestDirection == -1){
         bestDirection == (Forwards_Direction + 2) % 4;
     }
