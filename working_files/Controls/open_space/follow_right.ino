@@ -93,49 +93,58 @@ void Move(int Time, int Bearing){
 
 }
 
-// make decision returns 0-3 for cordinal directions, 0 is front and clockwise around.
-int Forwards_Direction = 0;
-int min_Distance = 700;
 
-int makeDecision(Sector sectors[36]) {  
-  
-  int bestDirection = -1;
-  float bestScore = 9000.0;
-  bool Turn = true;
+int Forwards_Direction = 0; // forward direction is a 0-35 value, same order as lidar scan
+int min_Distance = 700; // min distance is the minimum distance the car should stay from the wall
+int max_Distance = 1000; // max distance is the maximum distance the car should stay from the wall
+int bestDirection;
+float bestScore;
+
+void ScanMin(Sector sectors[36], int direction){ //ScanMin alters 2 global values, first value is the direciton bestDirection, second one is the score/distance bestScore
+  bestDirection = -1;
+  bestScore = 9000.0;
+  int CurrDirec;
   float score = 0.0;
 
-  while(Turn){
-
-    for (int j = -4; j < 5; j++) {
-      int k;
-
-      k = (9*Forwards_Direction + j + 36) % 36;
-      score = (sectors[k].average + sectors[k].minimum) / 2.0;
-
-      if (score < bestScore) {
-        bestScore = score;
-        bestDirection = (k + 27) % 36;
-      }
-    }
-
-    if (bestDirection >= Forwards_Direction-4 && bestDirection <= Forwards_Direction+4){
-      Forwards_Direction++;
-    }else{
-      Turn = false;
-    }
-
-  }
-    
   for (int j = -4; j < 5; j++) {
-    int k;
-      
-    k = (9*(Forwards_Direction+1) + j + 36) % 36;
-    score = (sectors[k].average + sectors[k].minimum) / 2.0;
+    CurrDirec = (direction + j + 9) % 36;
+
+    score = (sectors[CurrDirec].average + sectors[CurrDirec].minimum) / 2.0;
 
     if (score < bestScore) {
       bestScore = score;
-      bestDirection = (k + 27) % 36;
+      bestDirection = CurrDirec;
     }
+  }
+
+  if(bestDirection == -1){ //a stupid fix just in case something really stupid happens
+    bestDirection = direction;
+    bestScore = score;
+  }
+}
+
+// make decision returns 0-35 for bearing directions, going clockwise around and 0 is "forwards" on the lidar.
+int makeDecision(Sector sectors[36]) {
+  
+  bool Turn = true; //turn is a loop used in case the forwards direction needs to be changed (i.e. turning right or left (or i turn, which is 2 left turns))
+
+  //for right turns, there's no loop as there shouldn't be successive right turns (no rightward U turns)
+  ScanMin(sectors[36], (Forwards_Direction + 9) % 36);
+  if(bestScore > max_Distance){ //if it gets too far from the wall, it just starts moving towards the wall. This way is better for accounting for both cases of 1. it's a straight wall and it got too far away, and 2. it's a right turn
+    Forwards_Direction = (bestDirection + 9) % 36;
+  }else{
+    while(Turn){ //for left turns, if the car just did a right turn, it shouldn't need to do a left turn (reverse what it just did)
+      //checks if the "front" wall is too close, if so do a "left" turn
+      if(ScanMin(sectors[36], Forwards_Direction) < min_Distance){
+        Forwards_Direction = (Forwards_Direction + 27) % 36;
+      }else{
+        Turn = false;
+      }
+    }
+  }
+
+  ScanMin(sectors[36], Forwards_Direction)
+
 
   }
 
