@@ -42,7 +42,7 @@ struct Sector {
   int minimum;
 };
 
-Sector sectorsTest[36] = {
+Sector sectors[36] = {
   {0, 2500, 2450},    {10, 2500, 2480},   {20, 2500, 2470},   // Front - OPEN
   {30, 2500, 2490},   {40, 2500, 2460},   {50, 2500, 2475},   
   {60, 1500, 1450},   {70, 1200, 1150},   {80, 800, 750},     // Right side - wall getting closer
@@ -117,7 +117,7 @@ void ScanMin(Sector sectors[36], int direction){ //ScanMin alters 2 global value
     }
   }
 
-  if(bestDirection == -1){ //a stupid fix just in case something really stupid happens
+  if (bestDirection == -1) { //a stupid fix just in case something really stupid happens
     bestDirection = direction;
     bestScore = score;
   }
@@ -130,15 +130,15 @@ int makeDecision(Sector sectors[36]) {
 
   //for right turns, there's no loop as there shouldn't be successive right turns (no rightward U turns)
   ScanMin(sectors[36], (Forwards_Direction + 9) % 36);
-  if(bestScore > max_Distance){ //if it gets too far from the wall, it just starts moving towards the wall. This way is better for accounting for both cases of 1. it's a straight wall and it got too far away, and 2. it's a right turn
+  if (bestScore > max_Distance) { //if it gets too far from the wall, it just starts moving towards the wall. This way is better for accounting for both cases of 1. it's a straight wall and it got too far away, and 2. it's a right turn
     Forwards_Direction = (Forwards_Direction + 9) % 36;
-  }else{
-    while(Turn){ //for left turns; if the car just did a right turn, it shouldn't need to do a left turn (reverse what it just did)
+  } else {
+    while (Turn) { //for left turns; if the car just did a right turn, it shouldn't need to do a left turn (reverse what it just did)
       //checks if the "front" wall is close enough, if so do a "left" turn
       ScanMin(sectors[36], Forwards_Direction);
-      if(bestScore < max_Distance){ //if forwards direction is too close, turn left
+      if (bestScore < max_Distance) { //if forwards direction is too close, turn left
         Forwards_Direction = (Forwards_Direction + 27) % 36;
-      }else{
+      } else {
         Turn = false;
       }
     }
@@ -147,7 +147,7 @@ int makeDecision(Sector sectors[36]) {
   ScanMin(sectors[36], (Forwards_Direction + 9) % 36); //scans right side wall to see closest point
   Forwards_Direction = (bestDirection + 27) % 36; //sets the forwards direction to 90 degrees left from the direction of shortest distance from the wall
   
-  if(bestScore < min_Distance){ //if the car is too close to the wall, turn slightly (10 degrees) left
+  if (bestScore < min_Distance) { //if the car is too close to the wall, turn slightly (10 degrees) left
     Forwards_Direction = (bestDirection + 35) % 36;
   }
 
