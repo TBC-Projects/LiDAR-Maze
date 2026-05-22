@@ -42,7 +42,7 @@ struct Sector {
   int minimum;
 };
 
-Sector sectors[36] = {
+Sector sectorsTest[36] = {
   {0, 2500, 2450},    {10, 2500, 2480},   {20, 2500, 2470},   // Front - OPEN
   {30, 2500, 2490},   {40, 2500, 2460},   {50, 2500, 2475},   
   {60, 1500, 1450},   {70, 1200, 1150},   {80, 800, 750},     // Right side - wall getting closer
