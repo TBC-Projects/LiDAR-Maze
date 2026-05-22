@@ -131,11 +131,12 @@ int makeDecision(Sector sectors[36]) {
   //for right turns, there's no loop as there shouldn't be successive right turns (no rightward U turns)
   ScanMin(sectors[36], (Forwards_Direction + 9) % 36);
   if(bestScore > max_Distance){ //if it gets too far from the wall, it just starts moving towards the wall. This way is better for accounting for both cases of 1. it's a straight wall and it got too far away, and 2. it's a right turn
-    Forwards_Direction = (bestDirection + 9) % 36;
+    Forwards_Direction = (Forwards_Direction + 9) % 36;
   }else{
-    while(Turn){ //for left turns, if the car just did a right turn, it shouldn't need to do a left turn (reverse what it just did)
-      //checks if the "front" wall is too close, if so do a "left" turn
-      if(ScanMin(sectors[36], Forwards_Direction) < min_Distance){
+    while(Turn){ //for left turns; if the car just did a right turn, it shouldn't need to do a left turn (reverse what it just did)
+      //checks if the "front" wall is close enough, if so do a "left" turn
+      ScanMin(sectors[36], Forwards_Direction);
+      if(bestScore < max_Distance){ //if forwards direction is too close, turn left
         Forwards_Direction = (Forwards_Direction + 27) % 36;
       }else{
         Turn = false;
@@ -143,23 +144,15 @@ int makeDecision(Sector sectors[36]) {
     }
   }
 
-  ScanMin(sectors[36], Forwards_Direction)
-
-
-  }
-
-
-  if (bestScore < min_Distance) {
-    bestDirection = (bestDirection + 35) % 36;
-  }
+  ScanMin(sectors[36], (Forwards_Direction + 9) % 36); //scans right side wall to see closest point
+  Forwards_Direction = (bestDirection + 27) % 36; //sets the forwards direction to 90 degrees left from the direction of shortest distance from the wall
   
-  if (bestDirection == -1){
-      bestDirection == (Forwards_Direction + 2) % 4;
+  if(bestScore < min_Distance){ //if the car is too close to the wall, turn slightly (10 degrees) left
+    Forwards_Direction = (bestDirection + 35) % 36;
   }
 
-  
-  Move(int(score / MSp * 1), bestDirection + 1);
-  return bestDirection;
+  return Forwards_Direction;
+
 }
 
 
@@ -181,13 +174,14 @@ void setup() {
     } 
 
 
-  int decision;
+  int decision; //is decision reduntant, since output's just 'Forwards_Direction'?
   decision = makeDecision(sectorsTest);
 
   Serial.print("best direction:");
   Serial.println(decision);
 
-
+  Move(1000, decision); //moves forwards 1 second in the direction of the decision
+  Move(1, -1); //stops motors since this is just a test section and without it, it will just continue spinning
 
 }
 
