@@ -1,6 +1,7 @@
 import turtle
 import random
 import math
+import time
 
 turt_maze = turtle.Turtle()
 turt_scan = turtle.Turtle()
@@ -23,8 +24,8 @@ for i in range (n+1):         #THIS WILL PROBABLY BE REPLACED BY A SEPERATE PROG
     temp=[]
     for j in range (m+1):
         #temp.append([0,0])
-        bottom = random.randint(0,1)
-        left = random.randint(0,1)
+        bottom = int(random.randint(0,2) == 0)
+        left = int(random.randint(0,2) == 0)
 
         if (i == 0 or i == n): left = 1
         if (j == 0 or j == m): bottom = 1
@@ -50,12 +51,14 @@ def scan_sweep():
     
         len_sum = 0             #reset this section's total length (for average) and minimum length
         len_min = 3000
-        for offset in range(-5, 5, 1):    #sweeps through the 10 degrees of this segment, could be made finer or coarser
+        
+        section_div=10
+
+        for offset in range(section_div):    #sweeps through the 10 degrees of this segment, could be made finer or coarser
             curr_pos_temp = curr_pos.copy()
             cell_pos_temp = cell_pos.copy()
-
-            len_curr = scan_search(((angle * 10 + offset + 360) % 360) * math.pi / 180, 0)
-            print(len_curr)
+            print(((angle * 10 - 5 + offset/section_div + 360) % 360.0))
+            len_curr = scan_search(((angle * 10 - 5 + offset/section_div + 360) % 360.0) * math.pi / 180, 0)
             len_sum += len_curr     #adds total length and find's minimum length
             len_min = min(len_min, len_curr)
         
@@ -68,20 +71,18 @@ def scan_sweep():
 
 def scan_search(angle, length):
 
-    if (length>=2560):          #exit case, emulating if the scan goes beyond the lidar's maximum scan distance
-        return 2560.0
+    if (length>=1500):          #exit case, emulating if the scan goes beyond the lidar's maximum scan distance
+        return 1500.0
 
 
     cell_pos_temp[0] += math.sin(angle)     #adds to the distance by 1 in the angle theta
     cell_pos_temp[1] += math.cos(angle)
-    #print(cell_pos_temp)
 
     collision = False                    #booleans for if collision happened
 
 
     if cell_pos_temp[0] > a:    #checks if it moves beyond right side of cell
         if walls[curr_pos_temp[0] + 1][curr_pos_temp[1]][1] == 1:  #if the right side of the cell exists a wall
-            print("Collide right wall")
             collision = True
         else:
             curr_pos_temp[0] += 1
@@ -89,7 +90,6 @@ def scan_search(angle, length):
 
     elif cell_pos_temp[0] < 0:  #checks if it moves beyond left side of cell
         if walls[curr_pos_temp[0]][curr_pos_temp[1]][1] == 1:  #if the left side of the cell exists a wall
-            print("Collide left wall")
             collision = True
         else:
             curr_pos_temp[0] -= 1
@@ -97,9 +97,7 @@ def scan_search(angle, length):
 
         
     if cell_pos_temp[1] > a:    #checks if it moves beyond up side of cell
-        print(cell_pos_temp,curr_pos_temp, angle)
         if walls[curr_pos_temp[0]][curr_pos_temp[1] + 1][0] == 1:  #if the up side of the cell exists a wall
-            print("Collide up wall")
             collision = True
         else:
             curr_pos_temp[1] += 1
@@ -107,7 +105,6 @@ def scan_search(angle, length):
 
     elif cell_pos_temp[1] < 0:  #checks if it moves beyond down side of cell
         if walls[curr_pos_temp[0]][curr_pos_temp[1]][0] == 1:  #if the down side of the cell exists a wall
-            print("Collide down wall")
             collision = True
         else:
             curr_pos_temp[1] -= 1
@@ -121,9 +118,10 @@ def scan_search(angle, length):
     return(length)      #returns length (at collision or maximum distance)
 
 def scan_draw():
+    turt_scan.clear()
     for section in scan_output:
-        print(section)
         turt_scan.goto(a * (n+1) / 2 , 0)
+        turt_scan.goto(a * (-(n+1) / 2 + curr_pos[0]) + cell_pos[0] , a * (-(m+1) / 2 + curr_pos[1]) + cell_pos [1] )
         turt_scan.setheading(90-section[0])
         turt_scan.pendown()
         turt_scan.forward(section[2])
@@ -138,6 +136,7 @@ print(scan_output)
 
         
 turt_scan.speed(0)
+turt_scan.pencolor("blue")
 turt_scan.penup()
 turt_maze.speed(0) #we can probably slow down the turtle move speed to slow down the program running speed
 
@@ -164,9 +163,16 @@ for i in range(n+1):
 turt_maze.goto(a * (-(n+1) / 2 + curr_pos[0]) + cell_pos[0], a * (-(m+1) / 2 + curr_pos[1]) + cell_pos[0])
 
 
-#input()
+# for i in range(n):
+#     for j in range(m):
+#         curr_pos = [i,j]
+#         scan_sweep()
+#         scan_draw()
+#         time.sleep(.1)
 
 
+
+curr_pos = [int(input("Custom cell x cord: ")),int(input("Custom cell y cord: "))]
 scan_sweep()
 scan_draw()
 
