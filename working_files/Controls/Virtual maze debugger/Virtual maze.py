@@ -57,16 +57,14 @@ def scan_sweep():
         for offset in range(section_div):    #sweeps through the 10 degrees of this segment, could be made finer or coarser
             curr_pos_temp = curr_pos.copy()
             cell_pos_temp = cell_pos.copy()
-            print(((angle * 10 - 5 + offset/section_div + 360) % 360.0))
-            len_curr = scan_search(((angle * 10 - 5 + offset/section_div + 360) % 360.0) * math.pi / 180, 0)
+            #print(((angle * 10 - 5 + offset/section_div + 360) % 360.0))
+            len_curr = scan_search(((angle * 10 -5 + (offset / section_div) * 10 + 360) % 360.0) * math.pi / 180, 0)
             len_sum += len_curr     #adds total length and find's minimum length
             len_min = min(len_min, len_curr)
         
             
-        scan_output[angle] = [angle*10, len_sum/10, len_min]
-        #scan_output[angle][0] = [angle*10]    #saves current angle, average length and minimum length to the scan array
-        #scan_output[angle][1] = [len_sum/10]
-        #scan_output[angle][2] = [len_min]
+        scan_output[angle] = [angle*10, len_sum/10, len_min]    #saves current angle, average length and minimum length to the scan array
+    print(scan_output)
 
 
 def scan_search(angle, length):
@@ -132,11 +130,11 @@ def scan_draw():
 #scan_sweep()
 
 print(walls)
-print(scan_output)
 
         
 turt_scan.speed(0)
 turt_scan.pencolor("blue")
+turt_scan.hideturtle()
 turt_scan.penup()
 turt_maze.speed(0) #we can probably slow down the turtle move speed to slow down the program running speed
 
