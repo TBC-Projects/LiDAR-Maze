@@ -11,11 +11,12 @@ n = int(input("How many cells horizontally: "))
 m = int(input("How many cells vertically: "))
 
 a = float(input("How many millimetres is a cell: "))
-start_pos = [0,0]           #bottom left is 0,0 with first number as cells horizontal left to right, and second is cells vertical from top to bottom, it goes to [n,m]
-curr_pos = start_pos.copy()        #the current cell position of the car
-curr_pos_temp = curr_pos.copy()    #the temporary value that can be changed and used during the search algorithm
-cell_pos = [a/2, a/2]       #the (current) position of the car in the cell itself
-cell_pos_temp = cell_pos.copy()    #the temporary value that can be changed and used during the search algorithm
+start_pos = [0,0]                   #bottom left is 0,0 with first number as cells horizontal left to right, and second is cells vertical from top to bottom, it goes to [n,m]
+curr_pos = start_pos.copy()         #the current cell position of the car
+curr_pos_temp = curr_pos.copy()     #the temporary value that can be changed and used during the search algorithm
+curr_bearing = 0                    #the current bearing/front direction of the car compared to the "universal" up
+cell_pos = [a/2, a/2]               #the (current) position of the car in the cell itself
+cell_pos_temp = cell_pos.copy()     #the temporary value that can be changed and used during the search algorithm
 
 
 #walls is a n*m*2 array of boolean/ 0 or 1, which is a n*m grid of an array of 2, so n*m is the position, and the first bool of that position is if the bottom wall exist, and the second is if the left wall exist
@@ -58,7 +59,7 @@ def scan_sweep():
             curr_pos_temp = curr_pos.copy()
             cell_pos_temp = cell_pos.copy()
             #print(((angle * 10 - 5 + offset/section_div + 360) % 360.0))
-            len_curr = scan_search(((angle * 10 -5 + (offset / section_div) * 10 + 360) % 360.0) * math.pi / 180, 0)
+            len_curr = scan_search(((curr_bearing + angle * 10 -5 + (offset / section_div) * 10 + 360) % 360.0) * math.pi / 180, 0)
             len_sum += len_curr     #adds total length and find's minimum length
             len_min = min(len_min, len_curr)
         
@@ -120,7 +121,7 @@ def scan_draw():
     for section in scan_output:
         turt_scan.goto(a * (n+1) / 2 , 0)
         turt_scan.goto(a * (-(n+1) / 2 + curr_pos[0]) + cell_pos[0] , a * (-(m+1) / 2 + curr_pos[1]) + cell_pos [1] )
-        turt_scan.setheading(90-section[0])
+        turt_scan.setheading(90 - (section[0] + curr_bearing))
         turt_scan.pendown()
         turt_scan.forward(section[2])
         turt_scan.penup()
