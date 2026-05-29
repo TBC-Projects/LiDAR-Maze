@@ -9,14 +9,17 @@ turt_scan = turtle.Turtle()
 
 n = int(input("How many cells horizontally: "))
 m = int(input("How many cells vertically: "))
-
 a = float(input("How many millimetres is a cell: "))
+
 start_pos = [0,0]                   #bottom left is 0,0 with first number as cells horizontal left to right, and second is cells vertical from top to bottom, it goes to [n,m]
 curr_pos = start_pos.copy()         #the current cell position of the car
 curr_pos_temp = curr_pos.copy()     #the temporary value that can be changed and used during the search algorithm
 curr_bearing = 0                    #the current bearing/front direction of the car compared to the "universal" up
 cell_pos = [a/2, a/2]               #the (current) position of the car in the cell itself
 cell_pos_temp = cell_pos.copy()     #the temporary value that can be changed and used during the search algorithm
+
+step_size = 1                     #size of the step used in the search
+section_div=15                     #angular resolution used for each 10 degree arc/section of the search (i.e. how many subdivisions)
 
 
 #walls is a n*m*2 array of boolean/ 0 or 1, which is a n*m grid of an array of 2, so n*m is the position, and the first bool of that position is if the bottom wall exist, and the second is if the left wall exist
@@ -51,9 +54,7 @@ def scan_sweep():
     for angle in range(0,36):   #sweeps through the 36 main sections
     
         len_sum = 0             #reset this section's total length (for average) and minimum length
-        len_min = 3000
-        
-        section_div=10
+        len_min = 1200
 
         for offset in range(section_div):    #sweeps through the 10 degrees of this segment, could be made finer or coarser
             curr_pos_temp = curr_pos.copy()
@@ -64,8 +65,8 @@ def scan_sweep():
             len_min = min(len_min, len_curr)
         
             
-        scan_output[angle] = [angle*10, len_sum/10, len_min]    #saves current angle, average length and minimum length to the scan array
-    print(scan_output)
+        scan_output[angle] = [angle*10, len_sum/section_div, len_min]    #saves current angle, average length and minimum length to the scan array
+    #print(scan_output)
 
 
 def scan_search(angle, length):
@@ -74,8 +75,8 @@ def scan_search(angle, length):
         return 1500.0
 
 
-    cell_pos_temp[0] += math.sin(angle)     #adds to the distance by 1 in the angle theta
-    cell_pos_temp[1] += math.cos(angle)
+    cell_pos_temp[0] += step_size * math.sin(angle)     #adds to the distance by 1 in the angle theta
+    cell_pos_temp[1] += step_size * math.cos(angle)
 
     collision = False                    #booleans for if collision happened
 
@@ -112,14 +113,13 @@ def scan_search(angle, length):
 
 
     if collision == False:   #if a collision does not occur, continue recursion and continue scanning
-        length = scan_search(angle, length + 1)
+        length = scan_search(angle, length + step_size)
 
     return(length)      #returns length (at collision or maximum distance)
 
 def scan_draw():
     turt_scan.clear()
     for section in scan_output:
-        turt_scan.goto(a * (n+1) / 2 , 0)
         turt_scan.goto(a * (-(n+1) / 2 + curr_pos[0]) + cell_pos[0] , a * (-(m+1) / 2 + curr_pos[1]) + cell_pos [1] )
         turt_scan.setheading(90 - (section[0] + curr_bearing))
         turt_scan.pendown()
@@ -128,7 +128,6 @@ def scan_draw():
         turt_scan.forward(section[1]-section[2])
         turt_scan.dot()
 
-#scan_sweep()
 
 print(walls)
 
@@ -162,12 +161,12 @@ for i in range(n+1):
 turt_maze.goto(a * (-(n+1) / 2 + curr_pos[0]) + cell_pos[0], a * (-(m+1) / 2 + curr_pos[1]) + cell_pos[0])
 
 
-# for i in range(n):
-#     for j in range(m):
-#         curr_pos = [i,j]
-#         scan_sweep()
-#         scan_draw()
-#         time.sleep(.1)
+for i in range(n):
+    for j in range(m):
+        curr_pos = [i,j]
+        scan_sweep()
+        scan_draw()
+        time.sleep(.1)
 
 
 
