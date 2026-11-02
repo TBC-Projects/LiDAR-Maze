@@ -1,0 +1,31 @@
+flowchart TD
+    lidar["RPLidar C1"]
+
+    subgraph fpga["FPGA — Arty A7-100T"]
+        uart["UART receiver"]
+        parser["Packet parser<br/>Checksum and validity checks"]
+        sectors["Aggregate 5,000 points/sec into 18 sectors<br/>Angle + minimum/average distance per sector"]
+        safety["Safety override<br/>Emergency stop if obstacle &lt; 150 mm"]
+        ledDriver["WS2812 LED ring controller<br/>10 Hz updates"]
+        uart --> parser --> sectors
+        sectors --> safety
+        sectors --> ledDriver
+    end
+
+    subgraph arduino["Arduino Mega 2560"]
+        receive["Receive sector data<br/>18 distance values"]
+        path["Pathfinding<br/>Wall-following → Trémaux's algorithm"]
+        motion["Compute desired motion<br/>Direction + speed"]
+        kinematics["Kinematics<br/>Calculate 4 wheel speeds"]
+        receive --> path --> motion --> kinematics
+    end
+
+    shield["Adafruit Motor Shield v3<br/>4 independent PWM signals<br/>Direction control for each motor"]
+    motors["4 DC motors with omni wheels<br/>Robot moves through maze"]
+    ring["WS2812B LED ring — 24–48 LEDs<br/>Obstacle distance: RED / YELLOW / GREEN<br/>10 Hz updates synchronized with sensor"]
+
+    lidar -->|"UART · 460800 baud · raw sensor stream"| uart
+    sectors -->|"UART · 115200 baud · processed sectors"| receive
+    kinematics -->|"I2C"| shield
+    shield -->|"Power + control"| motors
+    ledDriver -->|"FPGA GPIO"| ring
