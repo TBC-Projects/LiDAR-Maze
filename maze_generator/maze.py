@@ -1,4 +1,5 @@
 from enum import Enum
+import random
 
 class Direction(Enum):
     UP = [-1, 0]
@@ -38,13 +39,6 @@ class SinglePathMaze:
         self.end_c = end_c
         self.cells = [[Cell(r, c, {Direction.UP: True, Direction.DOWN: True, Direction.LEFT: True, Direction.RIGHT: True}, r == start_r and c == start_c, r == end_r and c == end_c) for r in range(height)] for c in range(width)]
 
-    def remove_wall(self, r: int, c: int, dir: Direction):
-        self.cells[r][c].remove_wall(dir)
-        try:
-            self.cells[r + dir.value[0]][c + dir.value[1]].remove_wall(dir.opposite())
-        except IndexError:
-            pass
-
     def get_unvisited_neighbors(self, r: int, c: int):
         neighbors = []
         for dir in Direction.all():
@@ -64,3 +58,21 @@ class SinglePathMaze:
         while stack:
             current_cell = stack[-1]
             unvisited_neighbors = self.get_unvisited_neighbors(current_cell.row, current_cell.col)
+            if unvisited_neighbors:
+                next_cell: Cell = random.choice(unvisited_neighbors)
+                if next_cell.row < current_cell.row:
+                    current_cell.remove_wall(Direction.UP)
+                    next_cell.remove_wall(Direction.DOWN)
+                elif next_cell.row > current_cell.row:
+                    current_cell.remove_wall(Direction.DOWN)
+                    next_cell.remove_wall(Direction.UP)
+                elif next_cell.col < current_cell.col:
+                    current_cell.remove_wall(Direction.LEFT)
+                    next_cell.remove_wall(Direction.RIGHT)
+                else:
+                    current_cell.remove_wall(Direction.RIGHT)
+                    next_cell.remove_wall(Direction.LEFT)
+                next_cell.visited = True
+                stack.append(next_cell)
+            else:
+                stack.pop()
