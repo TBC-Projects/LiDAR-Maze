@@ -1,0 +1,138 @@
+`timescale 1ns/1ps
+
+// Module: uart_rx
+// Description: Generic 8N1 (8 data bits, No parity, 1 stop bit) UART receiver.
+//              Uses oversampling to align to the falling edge of the start bit
+//              and samples every subsequent bit right in the center of its eye
+//              to maximize noise immunity and clock-drift tolerance.
+module uart_rx #(
+    parameter int CLK_FREQ = 100_000_000, // System clock frequency in Hz (default: 100 MHz)
+    parameter int BAUD     = //inset the baud rate      // Target UART baud rate in bits/sec
+);
+    input  logic       clk;               // System clock
+    input  logic       rst;               // Synchronous, active-high reset
+    input  logic       rx;                // Asynchronous serial input line (idles HIGH)
+    output logic [7:0] data;              // Parallel 8-bit received byte
+    output logic       valid;             // Single-cycle strobe indicating 'data' is ready
+
+
+    // Timing & Width Calculations
+    // Number of system clock ticks per UART bit period.
+    // Example: 100,000,000 / 230,400 = ~434 clocks per bit.
+    localparam int CPB = CLK_FREQ / BAUD;
+
+    // Internal Signals & State Encoding
+    // Finite State Machine (FSM) states representing the UART frame structure:
+    // [IDLE (1)] -> [START (0)] -> [D0..D7 (LSB first)] -> [STOP (1)]
+    typedef enum logic [1:0] {
+        S_IDLE,   // Waiting for line to drop low (start bit)
+        S_START,  // Verifying start bit at its midpoint
+        S_DATA,   // Sampling the 8 data bits at their respective midpoints
+        S_STOP    // Verifying the stop bit at its midpoint and outputting byte
+    } state_t;
+    state_t state;
+
+    // Note: 16-bit counter supports CPB up to 65,535 (e.g., 9600 baud @ 100 MHz = 10,416)
+    logic [15:0] cnt;   // Sub-bit clock cycle counter (0 to CPB - 1)
+    logic [2:0]  bitn;  // Index of the data bit currently being received (0 to 7)
+    logic [7:0]  shift;    // Shift/holding register accumulating incoming bits
+
+    // Two-stage flip-flop synchronizer registers.
+    // Initialized to 1'b1 because UART lines idle HIGH; prevents a false start
+    // trigger right out of configuration/power-up before reset settles.
+    logic rx_s1 = 1'b1;
+    logic rx_s2 = 1'b1;
+
+    // Input Synchronizer (Metastability Protection)
+    // Because 'rx' comes from an external asynchronous clock domain, sampling it
+    // directly in the FSM can cause metastability. Passing it through two
+    // back-to-back flip-flops safely brings 'rx_s2' into the 'clk' domain.
+    always_ff @(posedge clk) begin
+        rx_s1 <= rx;
+        rx_s2 <= rx_s1;
+    end
+
+    // Main Receiver State Machine & Datapath
+    always_ff @(posedge clk) begin
+        if (rst) begin
+            state <= S_IDLE;
+            cnt   <= '0;
+            bitn  <= '0;
+            shift    <= '0;
+            data  <= '0;
+            valid <= 1'b0;
+        end else begin
+            // Default assignment: 'valid' stays low unless explicitly pulsed
+            // for 1 clock cycle upon successful frame reception in S_STOP.
+            valid <= 1'b0;
+
+            case (state)
+                // S_IDLE: Wait for the falling edge of the Start Bit
+                S_IDLE: begin
+                    // UART lines stay HIGH when idle. A LOW level indicates the
+                    // beginning of a start bit.
+                    if (!rx_s2) begin
+                        cnt   <= '0;      // Reset sub-bit timer to align with edge
+                        state <= S_START; // Move to validate the start bit
+                    end
+                end
+
+                // S_START: Align to the center of the Start Bit
+                S_START: begin
+                    // Count half a bit period (CPB/2) to reach the middle of the start bit
+                    if (cnt == CPB/2 - 1) begin
+                        cnt <= '0;
+                        // Re-check the line at the midpoint to filter out noise glitches
+                        if (!rx_s2) begin
+                            bitn  <= '0;     // Prepare to receive bit 0 (LSB)
+                            state <= S_DATA; // Valid start bit confirmed
+                        end else begin
+                            state <= S_IDLE; // Line went back HIGH; was just a glitch
+                        end
+                    end else begin
+                        cnt <= cnt + 1'b1;
+                    end
+                end
+
+                // S_DATA: Sample 8 Data Bits (LSB First)
+                S_DATA: begin
+                    // Since we entered S_DATA at the midpoint of the start bit,
+                    // waiting a full bit period (CPB clocks) puts us directly
+                    // at the midpoint of each subsequent data bit.
+                    if (cnt == CPB - 1) begin
+                        cnt      <= '0;
+                        shift[bitn] <= rx_s2; // Capture current bit into holding register
+
+                        if (bitn == 3'd7) begin
+                            state <= S_STOP; // All 8 bits (0..7) captured; expect stop bit
+                        end else begin
+                            bitn  <= bitn + 1'b1; // Advance to next bit index
+                        end
+                    end else begin
+                        cnt <= cnt + 1'b1;
+                    end
+                end
+
+                // S_STOP: Verify Stop Bit and Output Byte
+                S_STOP: begin
+                    // Wait one full bit period from D7's midpoint to reach the
+                    // midpoint of the Stop Bit.
+                    if (cnt == CPB - 1) begin
+                        cnt   <= '0;
+                        state <= S_IDLE; // Always return to IDLE after stop bit window
+
+                        // Framing check: a valid UART stop bit must be HIGH.
+                        // If rx_s2 is LOW, a framing error occurred and the byte is dropped.
+                        if (rx_s2) begin
+                            data  <= shift;   // Latch completed byte onto output bus
+                            valid <= 1'b1; // Assert valid strobe for 1 clock cycle
+                        end
+                    end else begin
+                        cnt <= cnt + 1'b1;
+                    end
+                end
+            endcase
+        end
+    end
+
+endmodule // uart_rx

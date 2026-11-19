@@ -1,0 +1,96 @@
+`timescale 1ns/1ps
+
+// Generic 8N1 (8 data bits, No parity, 1 stop bit) UART transmitter.
+// Serializes an 8-bit parallel byte onto 'tx' LSB-first when 'start' is pulsed.
+module uart_tx #(
+    parameter int CLK_FREQ = 100_000_000, // System clock frequency in Hz (default: 100 MHz)
+    parameter int BAUD     = 115_200      // Target UART baud rate in bits/sec
+);
+
+    input  logic       clk;               // System clock
+    input  logic       rst;               // Synchronous, active-high reset
+    input  logic       start;             // 1-clock strobe to begin transmission (ignored if busy)
+    input  logic [7:0] data;              // Parallel byte to transmit
+    output logic       tx;                // Serial output line (idles HIGH)
+    output logic       busy;               // HIGH whenever a frame is actively being transmitted
+
+
+    // Number of system clock cycles per UART bit period.
+    // Example: 100,000,000 / 115,200 = ~868 clock ticks per bit.
+    localparam int CPB = CLK_FREQ / BAUD;
+
+    // FSM states matching the 8N1 UART frame structure:
+    // [IDLE (1)] -> [START (0)] -> [D0..D7 (LSB first)] -> [STOP (1)]
+    typedef enum logic [1:0] {S_IDLE, S_START, S_DATA, S_STOP} state_t;
+    state_t state;
+
+    logic [15:0] cnt;   // Sub-bit cycle counter (0 to CPB - 1); 16 bits supports down to ~1,526 baud at 100 MHz
+    logic [2:0]  bitn;  // Index of the data bit currently on the 'tx' line (0 to 7)
+    logic [7:0]  sh;    // Holding/shift register that latches 'data' so upstream logic can change it mid-frame
+
+    // Combinational busy flag: deasserted only when ready to accept a new byte in S_IDLE
+    assign busy = (state != S_IDLE);
+
+    // Main transmitter state machine and output driver
+    always_ff @(posedge clk) begin
+        if (rst) begin
+            state <= S_IDLE;
+            cnt   <= '0;
+            bitn  <= '0;
+            sh    <= '0;
+            tx    <= 1'b1; // UART lines must idle HIGH
+        end else begin
+            case (state)
+                // Wait for a 'start' strobe while holding the line HIGH
+                S_IDLE: begin
+                    tx <= 1'b1;
+                    if (start) begin
+                        sh    <= data;    // Latch input byte so it remains stable throughout transmission
+                        cnt   <= '0;      // Reset bit timer
+                        tx    <= 1'b0;    // Drive start bit (LOW) immediately on the next clock edge
+                        state <= S_START;
+                    end
+                end
+
+                // Hold the start bit LOW for one full bit period (CPB clocks)
+                S_START: begin
+                    if (cnt == CPB - 1) begin
+                        cnt   <= '0;
+                        tx    <= sh[0];   // Transition directly to Data Bit 0 (LSB first)
+                        bitn  <= '0;
+                        state <= S_DATA;
+                    end else begin
+                        cnt <= cnt + 1'b1;
+                    end
+                end
+
+                // Shift out all 8 data bits, holding each bit on 'tx' for CPB clocks
+                S_DATA: begin
+                    if (cnt == CPB - 1) begin
+                        cnt <= '0;
+                        if (bitn == 3'd7) begin
+                            tx    <= 1'b1;              // All 8 bits sent; drive stop bit (HIGH)
+                            state <= S_STOP;
+                        end else begin
+                            tx   <= sh[bitn + 1'b1];    // Pre-load next bit onto 'tx' at the bit boundary
+                            bitn <= bitn + 1'b1;        // Increment bit index
+                        end
+                    end else begin
+                        cnt <= cnt + 1'b1;
+                    end
+                end
+
+                // Hold the stop bit HIGH for one full bit period before returning to IDLE
+                S_STOP: begin
+                    if (cnt == CPB - 1) begin
+                        cnt   <= '0;
+                        state <= S_IDLE; // Frame complete; 'busy' will drop LOW on this edge
+                    end else begin
+                        cnt <= cnt + 1'b1;
+                    end
+                end
+            endcase
+        end
+    end
+
+endmodule // uart_tx

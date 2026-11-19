@@ -17,7 +17,7 @@ def jacobian(L, W, r, phi_deg=0.0):
         a, dl = np.radians(phi_deg + d), np.radians(d)
         rows.append(np.array([np.sin(a), -np.cos(a), -y * np.sin(a) - x * np.cos(a)])
                     / (r * np.sin(dl)))
-    return np.array(rows)
+    return np.array(rows) 
 
 
 def test_mecanum_kinematics():
@@ -107,7 +107,6 @@ def test_mecanum_kinematics():
     assert cond(30) > cond(0), "Angled mounting should not beat the standard layout"
 
     print("All Mecanum kinematics tests passed!")
-
 
 # Run the Mecanum kinematics tests
 test_mecanum_kinematics()
