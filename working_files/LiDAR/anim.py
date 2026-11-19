@@ -1,13 +1,17 @@
 """
-Animated maze generation + solving with pygame.
+Maze escape animation (pygame).
 
-Pattern: every algorithm is a generator that yields after each step.
-The main loop advances the active generator a few steps per frame,
-then redraws. Algorithms never import pygame; drawing never knows
-which algorithm is running.
+- The car starts at a random spot near the middle of the grid.
+- The maze is a circle of radius RADIUS around that start, with one
+  random exit on its edge (different every run).
+- The solver only knows its distance from where it started. It explores
+  one path at a time (DFS with backtracking) and stops once it is
+  RADIUS cells away from the start.
+
+Controls: SPACE = new maze, UP/DOWN = faster/slower.
 """
+import math
 import random
-from collections import deque
 
 import pygame
 
@@ -15,24 +19,35 @@ import pygame
 COLS, ROWS = 30, 20
 CELL = 24
 MARGIN = 20
-STEPS_PER_FRAME = 3      # raise to speed up, lower to slow down
-FPS = 60
+RADIUS = 7               # fixed, known exit distance from the start (cells)
+START_JITTER = 2         # start lands within +/- this many cells of the middle
+STEPS_PER_FRAME = 1
+FPS = 30
 
-BG       = (20, 20, 28)
-WALL     = (230, 230, 235)
-CURRENT  = (255, 90, 90)
-VISITED  = (45, 60, 90)
-FRONTIER = (90, 140, 220)
-PATH     = (255, 200, 60)
+BG      = (20, 20, 28)
+WALL    = (230, 230, 235)
+OUTSIDE = (12, 12, 16)
+VISITED = (45, 60, 90)
+PATH    = (255, 200, 60)
+CAR     = (255, 90, 90)
+STARTC  = (90, 200, 120)
 
 DIRS = {'N': (0, -1, 'S'), 'S': (0, 1, 'N'), 'E': (1, 0, 'W'), 'W': (-1, 0, 'E')}
 
 
-# ---------------- shared state ----------------
+# ---------------- maze + state ----------------
 class Maze:
-    def __init__(self, cols, rows):
+    def __init__(self, cols, rows, start):
         self.cols, self.rows = cols, rows
+        self.start = start
         self.walls = {(x, y): set('NSEW') for x in range(cols) for y in range(rows)}
+
+    def dist(self, cell):
+        """Straight-line distance from the start: all the car can measure."""
+        return math.hypot(cell[0] - self.start[0], cell[1] - self.start[1])
+
+    def inside(self, cell):
+        return self.dist(cell) < RADIUS
 
     def neighbors(self, cell):
         """All in-bounds neighbors, regardless of walls."""
@@ -43,69 +58,80 @@ class Maze:
                 yield d, n, opp
 
     def open_neighbors(self, cell):
-        """Neighbors you can actually walk to (no wall between)."""
+        """Neighbors reachable without crossing a wall."""
         for d, n, _ in self.neighbors(cell):
             if d not in self.walls[cell]:
                 yield n
 
+    def remove_wall(self, cell, d, n, opp):
+        self.walls[cell].discard(d)
+        self.walls[n].discard(opp)
+
 
 class View:
-    """Everything the renderer needs to know about the current step."""
+    """What the renderer draws for the current step."""
     def __init__(self):
         self.current = None
         self.visited = set()
-        self.frontier = set()
         self.path = []
 
 
-# ---------------- algorithms (generators) ----------------
+def random_start():
+    return (COLS // 2 + random.randint(-START_JITTER, START_JITTER),
+            ROWS // 2 + random.randint(-START_JITTER, START_JITTER))
+
+
+# ---------------- generation ----------------
 def gen_backtracker(maze, view):
-    start = (0, 0)
+    """Randomized DFS, carving only inside the circle around the start."""
+    start = maze.start
     stack = [start]
     view.visited = {start}
     while stack:
         cell = stack[-1]
         view.current = cell
         options = [(d, n, opp) for d, n, opp in maze.neighbors(cell)
-                   if n not in view.visited]
+                   if n not in view.visited and maze.inside(n)]
         if not options:
             stack.pop()
         else:
             d, n, opp = random.choice(options)
-            maze.walls[cell].discard(d)
-            maze.walls[n].discard(opp)
+            maze.remove_wall(cell, d, n, opp)
             view.visited.add(n)
             stack.append(n)
-        yield                       # <- one animation step
+        yield
+    open_random_exit(maze)
     view.current = None
+    view.visited = set()
 
 
-def solve_bfs(maze, view, start, goal):
-    """Example solver. Replace with yours; the only rules are:
-    update `view` as you go and `yield` once per step."""
-    view.visited, view.frontier, view.path = set(), {start}, []
-    queue = deque([start])
-    came_from = {start: None}
-    while queue:
-        cell = queue.popleft()
+def open_random_exit(maze):
+    """Open one random wall on the edge of the circle: the only way out."""
+    edges = [(c, d, n, opp) for c in maze.walls if maze.inside(c)
+             for d, n, opp in maze.neighbors(c) if not maze.inside(n)]
+    maze.remove_wall(*random.choice(edges))
+
+
+# ---------------- solving ----------------
+def solve_dfs(maze, view):
+    """One path at a time. The stack is the car's current path."""
+    start = maze.start
+    stack = [start]
+    view.visited = {start}
+    while stack:
+        cell = stack[-1]
         view.current = cell
-        view.frontier.discard(cell)
-        view.visited.add(cell)
-        if cell == goal:
+        view.path = list(stack)
+        if maze.dist(cell) >= RADIUS:          # far enough from start: escaped
             break
-        for n in maze.open_neighbors(cell):
-            if n not in came_from:
-                came_from[n] = cell
-                queue.append(n)
-                view.frontier.add(n)
+        unexplored = [n for n in maze.open_neighbors(cell) if n not in view.visited]
+        if unexplored:
+            n = random.choice(unexplored)      # or a fixed order, e.g. left-first
+            view.visited.add(n)
+            stack.append(n)
+        else:
+            stack.pop()                        # dead end: back up
         yield
-    # reconstruct path, animating it back from the goal
-    cell = goal
-    while cell is not None:
-        view.path.append(cell)
-        cell = came_from.get(cell)
-        yield
-    view.current = None
 
 
 # ---------------- drawing ----------------
@@ -117,16 +143,21 @@ def cell_rect(cell):
 def draw(screen, maze, view):
     screen.fill(BG)
 
+    for cell in maze.walls:
+        if not maze.inside(cell):
+            screen.fill(OUTSIDE, cell_rect(cell))
     for c in view.visited:
         screen.fill(VISITED, cell_rect(c))
-    for c in view.frontier:
-        screen.fill(FRONTIER, cell_rect(c))
     for c in view.path:
         screen.fill(PATH, cell_rect(c).inflate(-CELL // 2, -CELL // 2))
+    screen.fill(STARTC, cell_rect(maze.start).inflate(-6, -6))
     if view.current:
-        screen.fill(CURRENT, cell_rect(view.current).inflate(-4, -4))
+        screen.fill(CAR, cell_rect(view.current).inflate(-6, -6))
 
+    # draw walls only around the maze area, so the outside stays clean
     for cell, ws in maze.walls.items():
+        if not maze.inside(cell):
+            continue
         r = cell_rect(cell)
         if 'N' in ws: pygame.draw.line(screen, WALL, r.topleft, r.topright, 2)
         if 'S' in ws: pygame.draw.line(screen, WALL, r.bottomleft, r.bottomright, 2)
@@ -135,19 +166,22 @@ def draw(screen, maze, view):
 
 
 # ---------------- main loop ----------------
+def phases():
+    """Generate the maze, then solve it."""
+    maze, view = Maze(COLS, ROWS, random_start()), View()
+    yield maze, view, gen_backtracker(maze, view)
+    yield maze, view, solve_dfs(maze, view)
+
+
 def main():
+    assert RADIUS + START_JITTER < min(COLS, ROWS) // 2, "circle won't fit in the grid"
+
     pygame.init()
     screen = pygame.display.set_mode((COLS * CELL + 2 * MARGIN,
                                       ROWS * CELL + 2 * MARGIN))
-    pygame.display.set_caption("Maze — SPACE: restart, UP/DOWN: speed")
+    pygame.display.set_caption("Maze escape — SPACE: new maze, UP/DOWN: speed")
     clock = pygame.time.Clock()
     speed = STEPS_PER_FRAME
-
-    def phases():
-        """Chain the stages: generate, then solve."""
-        maze, view = Maze(COLS, ROWS), View()
-        yield maze, view, gen_backtracker(maze, view)
-        yield maze, view, solve_bfs(maze, view, (0, 0), (COLS - 1, ROWS - 1))
 
     stages = phases()
     maze, view, algo = next(stages)
@@ -162,7 +196,7 @@ def main():
                     stages = phases()
                     maze, view, algo = next(stages)
                 elif e.key == pygame.K_UP:
-                    speed = min(speed * 2, 1024)
+                    speed = min(speed * 2, 256)
                 elif e.key == pygame.K_DOWN:
                     speed = max(speed // 2, 1)
 
