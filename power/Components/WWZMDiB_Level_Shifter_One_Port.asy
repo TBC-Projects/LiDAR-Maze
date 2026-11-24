@@ -1,0 +1,17 @@
+Version 4
+SymbolType BLOCK
+RECTANGLE Normal 80 48 -80 -64
+TEXT 0 -59 Center 0 3.3v - 5v
+WINDOW 0 0 -72 Bottom 2
+PIN 80 16 RIGHT 8
+PINATTR PinName H1
+PINATTR SpiceOrder 1
+PIN 80 -32 RIGHT 8
+PINATTR PinName HV
+PINATTR SpiceOrder 2
+PIN -80 16 LEFT 8
+PINATTR PinName L1
+PINATTR SpiceOrder 3
+PIN -80 -32 LEFT 8
+PINATTR PinName LV
+PINATTR SpiceOrder 4

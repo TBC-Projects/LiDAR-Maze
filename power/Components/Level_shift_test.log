@@ -1,0 +1,10 @@
+LTspice 26.0.1 for Windows
+Circuit: C:\Users\zeroz\OneDrive\Documents\LTspice\Level_shift_test.net
+Start Time: Mon Nov 23 16:03:44 2026
+C:\Users\zeroz\OneDrive\Documents\LTspice\Level_shift_test.net(13): Node or model name expected.
+Note that there is a sub-circuit with the same name "BSS138" defined,
+which might indicate that this error is simply caused by the wrong prefix letter.
+Consider using the prefix "X" instead of "M".
+You can change the prefix by editing the "Prefix" attribute in the component attribute editor.
+M§X H1 LV L1 L1 BSS138
+                ^^^^^^
